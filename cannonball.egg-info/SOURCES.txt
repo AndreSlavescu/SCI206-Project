@@ -1,0 +1,6 @@
+setup.py
+cannonball.egg-info/PKG-INFO
+cannonball.egg-info/SOURCES.txt
+cannonball.egg-info/dependency_links.txt
+cannonball.egg-info/requires.txt
+cannonball.egg-info/top_level.txt
