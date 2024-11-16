@@ -2,6 +2,7 @@ import pygame
 import math
 import os
 import sys
+import asyncio
 
 def resource_path(relative_path):
     try:
@@ -11,11 +12,7 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-pygame.init()
-
 WIDTH, HEIGHT = 1200, 800
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Cannonball Simulation")
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -23,21 +20,14 @@ RED = (255, 0, 0)
 GRAY = (128, 128, 128)
 GREEN = (0, 255, 0)
 
-mass = 10.0
-gravity = 9.8
-air_density = 1.225
 initial_velocity = 50
 drag_coefficient = 0.47
 ball_radius = 6
-
-SIMULATION_WIDTH = 900
-SIMULATION_HEIGHT = HEIGHT - 100
-
 PIXELS_PER_METER = 10
-
 ball_radius_meters = ball_radius / PIXELS_PER_METER
 
-trajectory_points = []
+SIMULATION_WIDTH = 800
+SIMULATION_HEIGHT = HEIGHT - 100
 
 class Button:
     def __init__(self, x, y, width, height, text):
@@ -138,93 +128,119 @@ reset_ball()
 running = True
 dt = 1/30
 
-while running:
-    screen.fill(BLACK)
+async def main():
+    print("Starting initialization...")
+    pygame.init()
+    global screen, mass, gravity, air_density, position, velocity, trajectory_points
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+    pygame.display.set_caption("Cannonball Simulation")
+
+    mass = 10.0
+    gravity = 9.8
+    air_density = 1.225
+    position = [50 / PIXELS_PER_METER, ball_radius_meters]
+    velocity = [0, 0]
+    trajectory_points = []
+
+    print("Screen initialized...")
     
-    pygame.draw.rect(screen, WHITE, (0, 0, SIMULATION_WIDTH, SIMULATION_HEIGHT), 2)
+    global running
+    running = True
     
-    pygame.draw.rect(screen, GREEN, (0, SIMULATION_HEIGHT - 5, SIMULATION_WIDTH, 5))
+    reset_ball()
     
-    if len(trajectory_points) > 1:
-        pygame.draw.lines(screen, GRAY, False, trajectory_points, 2)
+    print("Starting game loop...")
+    
+    while running:
+        screen.fill(BLACK)
+        
+        pygame.draw.rect(screen, WHITE, (0, 0, SIMULATION_WIDTH, SIMULATION_HEIGHT), 2)
+        
+        pygame.draw.rect(screen, GREEN, (0, SIMULATION_HEIGHT - 5, SIMULATION_WIDTH, 5))
+        
+        if len(trajectory_points) > 1:
+            pygame.draw.lines(screen, GRAY, False, trajectory_points, 2)
 
-    mouse_pos = pygame.mouse.get_pos()
-    for button in buttons:
-        button.update(mouse_pos)
+        mouse_pos = pygame.mouse.get_pos()
+        for button in buttons:
+            button.update(mouse_pos)
 
-    for button in buttons:
-        button.draw(screen)
-    angle_slider.draw(screen)
+        for button in buttons:
+            button.draw(screen)
+        angle_slider.draw(screen)
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            mouse_pos = event.pos
-            for i, button in enumerate(buttons):
-                if button.is_clicked(mouse_pos):
-                    if i == 0:
-                        mass += 0.5
-                    elif i == 1:
-                        mass = max(0.5, mass - 0.5)
-                    elif i == 2:
-                        gravity += 1.0
-                    elif i == 3:
-                        gravity = max(0, gravity - 1.0)
-                    elif i == 4:
-                        air_density += 0.1
-                    elif i == 5:
-                        air_density = max(0, air_density - 0.1)
-                    reset_ball()
-            angle_slider.handle_event(event)
-        elif event.type == pygame.MOUSEBUTTONUP:
-            angle_slider.handle_event(event)
-        elif event.type == pygame.MOUSEMOTION:
-            angle_slider.handle_event(event)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                for i, button in enumerate(buttons):
+                    if button.is_clicked(mouse_pos):
+                        if i == 0:
+                            mass += 0.5
+                        elif i == 1:
+                            mass = max(0.5, mass - 0.5)
+                        elif i == 2:
+                            gravity += 1.0
+                        elif i == 3:
+                            gravity = max(0, gravity - 1.0)
+                        elif i == 4:
+                            air_density += 0.1
+                        elif i == 5:
+                            air_density = max(0, air_density - 0.1)
+                        reset_ball()
+                angle_slider.handle_event(event)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                angle_slider.handle_event(event)
+            elif event.type == pygame.MOUSEMOTION:
+                angle_slider.handle_event(event)
 
-    velocity_magnitude = math.hypot(velocity[0], velocity[1])
+        velocity_magnitude = math.hypot(velocity[0], velocity[1])
 
-    cross_sectional_area = math.pi * (ball_radius_meters ** 2)
+        cross_sectional_area = math.pi * (ball_radius_meters ** 2)
 
-    if velocity_magnitude != 0:
-        drag_force_x = -0.5 * drag_coefficient * air_density * cross_sectional_area * (velocity[0] / velocity_magnitude) * velocity_magnitude**2
-        drag_force_y = -0.5 * drag_coefficient * air_density * cross_sectional_area * (velocity[1] / velocity_magnitude) * velocity_magnitude**2
-    else:
-        drag_force_x = 0
-        drag_force_y = 0
+        if velocity_magnitude != 0:
+            drag_force_x = -0.5 * drag_coefficient * air_density * cross_sectional_area * (velocity[0] / velocity_magnitude) * velocity_magnitude**2
+            drag_force_y = -0.5 * drag_coefficient * air_density * cross_sectional_area * (velocity[1] / velocity_magnitude) * velocity_magnitude**2
+        else:
+            drag_force_x = 0
+            drag_force_y = 0
 
-    acceleration_x = drag_force_x / mass
-    acceleration_y = drag_force_y / mass - gravity
+        acceleration_x = drag_force_x / mass
+        acceleration_y = drag_force_y / mass - gravity
 
-    velocity[0] += acceleration_x * dt
-    velocity[1] += acceleration_y * dt
+        velocity[0] += acceleration_x * dt
+        velocity[1] += acceleration_y * dt
 
-    position[0] += velocity[0] * dt
-    position[1] += velocity[1] * dt
+        position[0] += velocity[0] * dt
+        position[1] += velocity[1] * dt
 
-    x_pixel = int(position[0] * PIXELS_PER_METER)
-    y_pixel = SIMULATION_HEIGHT - int(position[1] * PIXELS_PER_METER)
+        x_pixel = int(position[0] * PIXELS_PER_METER)
+        y_pixel = SIMULATION_HEIGHT - int(position[1] * PIXELS_PER_METER)
 
-    if 0 <= x_pixel <= SIMULATION_WIDTH and 0 <= y_pixel <= SIMULATION_HEIGHT:
-        trajectory_points.append((x_pixel, y_pixel))
+        if 0 <= x_pixel <= SIMULATION_WIDTH and 0 <= y_pixel <= SIMULATION_HEIGHT:
+            trajectory_points.append((x_pixel, y_pixel))
 
-    if 0 <= x_pixel <= SIMULATION_WIDTH and 0 <= y_pixel <= SIMULATION_HEIGHT:
-        pygame.draw.circle(screen, WHITE, (x_pixel, y_pixel), ball_radius)
+        if 0 <= x_pixel <= SIMULATION_WIDTH and 0 <= y_pixel <= SIMULATION_HEIGHT:
+            pygame.draw.circle(screen, WHITE, (x_pixel, y_pixel), ball_radius)
 
-    if position[1] <= ball_radius_meters:
-        reset_ball()
+        if position[1] <= ball_radius_meters:
+            reset_ball()
 
-    font = pygame.font.SysFont(None, 28)
-    stats = [
-        f"Mass: {mass:.1f} kg",
-        f"Gravity: {gravity:.1f} m/s²",
-        f"Air Density: {air_density:.3f} kg/m³"
-    ]
-    for i, text in enumerate(stats):
-        text_surface = font.render(text, True, WHITE)
-        screen.blit(text_surface, (start_x, start_y + 3 * (button_height + button_spacing) + i * 30))
+        font = pygame.font.SysFont(None, 28)
+        stats = [
+            f"Mass: {mass:.1f} kg",
+            f"Gravity: {gravity:.1f} m/s²",
+            f"Air Density: {air_density:.3f} kg/m³"
+        ]
+        for i, text in enumerate(stats):
+            text_surface = font.render(text, True, WHITE)
+            screen.blit(text_surface, (start_x, start_y + 3 * (button_height + button_spacing) + i * 30))
 
-    pygame.display.flip()
-    pygame.time.Clock().tick(60)
+        pygame.display.flip()
+        await asyncio.sleep(0)
 
-pygame.quit()
+    pygame.quit()
+
+if __name__ == '__main__':
+    asyncio.run(main())
