@@ -1,0 +1,8 @@
+{
+    "app_name": "cannon_ball",
+    "files": [
+        "main.py",
+        "learning_quotes.py",
+        "__init__.py"
+    ]
+} 
