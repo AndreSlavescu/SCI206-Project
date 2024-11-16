@@ -17,6 +17,8 @@ python3 cannon_ball/game.py
 ## Play game in the web
 visit: https://andreslavescu.github.io/SCI206-Project/
 
+## Credits
+
 Created by:
 
 Andre Slavescu, Deyi Zhang, and Aditya Karkera
