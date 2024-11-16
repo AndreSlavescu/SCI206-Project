@@ -90,14 +90,22 @@ class Slider:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
                 self.dragging = True
-                should_update_quotes = True
+                rel_x = event.pos[0] - self.rect.x
+                percent = max(0, min(1, rel_x / self.rect.width))
+                new_value = self.min_val + percent * (self.max_val - self.min_val)
+                if new_value != self.value:
+                    self.value = new_value
+                    should_update_quotes = True
+                else:
+                    should_update_quotes = True
         elif event.type == pygame.MOUSEBUTTONUP:
-            self.dragging = False
+            if self.dragging:
+                self.dragging = False
+                should_update_quotes = True
         elif event.type == pygame.MOUSEMOTION and self.dragging:
             rel_x = event.pos[0] - self.rect.x
             percent = max(0, min(1, rel_x / self.rect.width))
             self.value = self.min_val + percent * (self.max_val - self.min_val)
-            should_update_quotes = True
 
 button_width = 120
 button_height = 40

@@ -47,8 +47,6 @@ ANGLE_QUOTES = {
     ],
     'medium': [
         "45 degrees - the sweet spot for maximum distance!",
-        "The perfect balance between height and distance.",
-        "This is the angle that mathematicians love!",
     ],
     'low': [
         "Low angle means more distance, less height.",
@@ -75,11 +73,13 @@ def get_value_trend(current, history):
     return 'experimenting'
 
 def get_angle_category(angle):
-    if angle > 60:
+    print(f"Angle: {angle}")
+    if angle == 45:
+        return 'medium'
+    if angle > 45:
         return 'high'
-    elif angle < 30:
+    if angle < 45:
         return 'low'
-    return 'medium'
 
 def get_random_quote(category, subcategory):
     quotes = globals().get(f"{category}_QUOTES", {})
