@@ -3,6 +3,7 @@ import math
 import os
 import sys
 import asyncio
+from learning_quotes import *
 
 def resource_path(relative_path):
     try:
@@ -75,15 +76,18 @@ class Slider:
         screen.blit(text_surface, text_rect)
 
     def handle_event(self, event):
+        global should_update_quotes
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
                 self.dragging = True
+                should_update_quotes = True
         elif event.type == pygame.MOUSEBUTTONUP:
             self.dragging = False
         elif event.type == pygame.MOUSEMOTION and self.dragging:
             rel_x = event.pos[0] - self.rect.x
             percent = max(0, min(1, rel_x / self.rect.width))
             self.value = self.min_val + percent * (self.max_val - self.min_val)
+            should_update_quotes = True
 
 button_width = 120
 button_height = 40
@@ -128,6 +132,78 @@ reset_ball()
 running = True
 dt = 1/30
 
+mass_history = []
+gravity_history = []
+air_density_history = []
+last_angle = 45
+should_update_quotes = False
+explanation = []
+
+def get_explanation_text():
+    global mass_history, gravity_history, air_density_history, last_angle
+    angle = int(angle_slider.value)
+    
+    if abs(angle - last_angle) > 5:
+        angle_quote = get_random_quote('ANGLE', get_angle_category(angle))
+        last_angle = angle
+    else:
+        angle_quote = ""
+
+    mass_history = (mass_history + [mass])[-3:]
+    gravity_history = (gravity_history + [gravity])[-3:]
+    air_density_history = (air_density_history + [air_density])[-3:]
+
+    explanation = [f"At {angle}° launch angle: {angle_quote}" if angle_quote else f"At {angle}° launch angle:"]
+    
+    if len(mass_history) > 1:
+        explanation.append("")
+        trend = 'increase' if mass_history[-1] > mass_history[-2] else 'decrease'
+        explanation.append(f"• Mass ({mass:.1f}kg): {get_random_quote('MASS', trend)}")
+    
+    if len(gravity_history) > 1:
+        explanation.append("")
+        trend = 'increase' if gravity_history[-1] > gravity_history[-2] else 'decrease'
+        explanation.append(f"• Gravity ({gravity:.1f} m/s²): {get_random_quote('GRAVITY', trend)}")
+    
+    if len(air_density_history) > 1:
+        explanation.append("")
+        trend = 'increase' if air_density_history[-1] > air_density_history[-2] else 'decrease'
+        explanation.append(f"• Air density ({air_density:.3f} kg/m³): {get_random_quote('AIR_DENSITY', trend)}")
+
+    if len(mass_history) > 2 and get_value_trend(mass, mass_history) == 'experimenting':
+        explanation.append("")
+        explanation.append("")
+        explanation.append(get_random_quote('TREND', 'experimenting'))
+
+    return explanation
+
+def draw_wrapped_text(screen, text, font, color, rect):
+    words = text.split(' ')
+    lines = []
+    current_line = []
+    current_width = 0
+    
+    for word in words:
+        word_surface = font.render(word + ' ', True, color)
+        word_width = word_surface.get_width()
+        
+        if current_width + word_width <= rect.width:
+            current_line.append(word)
+            current_width += word_width
+        else:
+            lines.append(' '.join(current_line))
+            current_line = [word]
+            current_width = word_width
+    
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    y = rect.top
+    for line in lines:
+        text_surface = font.render(line, True, color)
+        screen.blit(text_surface, (rect.left, y))
+        y += font.get_height() + 2
+
 async def main():
     print("Starting initialization...")
     pygame.init()
@@ -150,6 +226,9 @@ async def main():
     reset_ball()
     
     print("Starting game loop...")
+    
+    global explanation
+    explanation = get_explanation_text()
     
     while running:
         screen.fill(BLACK)
@@ -176,18 +255,26 @@ async def main():
                 mouse_pos = event.pos
                 for i, button in enumerate(buttons):
                     if button.is_clicked(mouse_pos):
+                        global should_update_quotes
+                        should_update_quotes = True
                         if i == 0:
                             mass += 0.5
+                            mass_history.append(mass)
                         elif i == 1:
                             mass = max(0.5, mass - 0.5)
+                            mass_history.append(mass)
                         elif i == 2:
                             gravity += 1.0
+                            gravity_history.append(gravity)
                         elif i == 3:
                             gravity = max(0, gravity - 1.0)
+                            gravity_history.append(gravity)
                         elif i == 4:
                             air_density += 0.1
+                            air_density_history.append(air_density)
                         elif i == 5:
                             air_density = max(0, air_density - 0.1)
+                            air_density_history.append(air_density)
                         reset_ball()
                 angle_slider.handle_event(event)
             elif event.type == pygame.MOUSEBUTTONUP:
@@ -236,6 +323,29 @@ async def main():
         for i, text in enumerate(stats):
             text_surface = font.render(text, True, WHITE)
             screen.blit(text_surface, (start_x, start_y + 3 * (button_height + button_spacing) + i * 30))
+
+        if should_update_quotes:
+            explanation = get_explanation_text()
+            should_update_quotes = False
+
+        text_box = pygame.Rect(
+            start_x, 
+            start_y + 5 * (button_height + button_spacing),
+            WIDTH - start_x - 40,
+            HEIGHT - (start_y + 5 * (button_height + button_spacing)) - 40
+        )
+
+        font = pygame.font.SysFont(None, 24)
+        y_position = text_box.top
+        line_spacing = font.get_height() + 20
+
+        for line in explanation:
+            if line.strip():
+                draw_wrapped_text(screen, line, font, WHITE, 
+                    pygame.Rect(text_box.left, y_position, text_box.width, text_box.height))
+                y_position += line_spacing
+            else:
+                y_position += line_spacing // 2
 
         pygame.display.flip()
         await asyncio.sleep(0)
