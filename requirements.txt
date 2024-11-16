@@ -1,3 +1,4 @@
 pygame
+pygbag
 pyinstaller
 pyinstaller-hooks-contrib

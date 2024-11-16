@@ -1,3 +1,5 @@
 cannonball.egg-info/
 builds/CannonballGame-arm64.app/
 builds/CannonballGame-x86_64.app/
+web-cache/
+__pycache__/
