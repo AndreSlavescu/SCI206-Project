@@ -1,0 +1,15 @@
+{
+    "name": "cannon_ball",
+    "scripts": {
+        "serve": "python -m http.server",
+        "build": "pygbag ."
+    },
+    "files": [
+        "main.py",
+        "learning_quotes.py",
+        "__init__.py"
+    ],
+    "dependencies": {
+        "pygame": "*"
+    }
+} 

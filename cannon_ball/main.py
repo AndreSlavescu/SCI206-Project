@@ -3,7 +3,17 @@ import math
 import os
 import sys
 import asyncio
-from learning_quotes import *
+print("Python path:", sys.path) 
+print("Starting game initialization...")
+print("Current directory:", os.getcwd()) 
+print("Files in current directory:", os.listdir())
+
+try:
+    from learning_quotes import *
+    print("✓ Successfully imported learning_quotes.py")
+except ImportError as e:
+    print("✗ Failed to import learning_quotes.py:", str(e))
+    print("Python path:", sys.path)
 
 def resource_path(relative_path):
     try:
@@ -140,42 +150,51 @@ should_update_quotes = False
 explanation = []
 
 def get_explanation_text():
+    print("Attempting to get explanation text")
     global mass_history, gravity_history, air_density_history, last_angle
     angle = int(angle_slider.value)
     
-    if abs(angle - last_angle) > 5:
-        angle_quote = get_random_quote('ANGLE', get_angle_category(angle))
-        last_angle = angle
-    else:
-        angle_quote = ""
+    try:
+        if abs(angle - last_angle) > 5:
+            angle_quote = get_random_quote('ANGLE', get_angle_category(angle))
+            print("Got angle quote:", angle_quote)
+            last_angle = angle
+        else:
+            angle_quote = ""
 
-    mass_history = (mass_history + [mass])[-3:]
-    gravity_history = (gravity_history + [gravity])[-3:]
-    air_density_history = (air_density_history + [air_density])[-3:]
+        mass_history = (mass_history + [mass])[-3:]
+        gravity_history = (gravity_history + [gravity])[-3:]
+        air_density_history = (air_density_history + [air_density])[-3:]
 
-    explanation = [f"At {angle}° launch angle: {angle_quote}" if angle_quote else f"At {angle}° launch angle:"]
-    
-    if len(mass_history) > 1:
-        explanation.append("")
-        trend = 'increase' if mass_history[-1] > mass_history[-2] else 'decrease'
-        explanation.append(f"• Mass ({mass:.1f}kg): {get_random_quote('MASS', trend)}")
-    
-    if len(gravity_history) > 1:
-        explanation.append("")
-        trend = 'increase' if gravity_history[-1] > gravity_history[-2] else 'decrease'
-        explanation.append(f"• Gravity ({gravity:.1f} m/s²): {get_random_quote('GRAVITY', trend)}")
-    
-    if len(air_density_history) > 1:
-        explanation.append("")
-        trend = 'increase' if air_density_history[-1] > air_density_history[-2] else 'decrease'
-        explanation.append(f"• Air density ({air_density:.3f} kg/m³): {get_random_quote('AIR_DENSITY', trend)}")
+        explanation = [f"At {angle}° launch angle: {angle_quote}" if angle_quote else f"At {angle}° launch angle:"]
+        
+        if len(mass_history) > 1:
+            explanation.append("")
+            trend = 'increase' if mass_history[-1] > mass_history[-2] else 'decrease'
+            explanation.append(f"• Mass ({mass:.1f}kg): {get_random_quote('MASS', trend)}")
+        
+        if len(gravity_history) > 1:
+            explanation.append("")
+            trend = 'increase' if gravity_history[-1] > gravity_history[-2] else 'decrease'
+            explanation.append(f"• Gravity ({gravity:.1f} m/s²): {get_random_quote('GRAVITY', trend)}")
+        
+        if len(air_density_history) > 1:
+            explanation.append("")
+            trend = 'increase' if air_density_history[-1] > air_density_history[-2] else 'decrease'
+            explanation.append(f"• Air density ({air_density:.3f} kg/m³): {get_random_quote('AIR_DENSITY', trend)}")
 
-    if len(mass_history) > 2 and get_value_trend(mass, mass_history) == 'experimenting':
-        explanation.append("")
-        explanation.append("")
-        explanation.append(get_random_quote('TREND', 'experimenting'))
+        if len(mass_history) > 2 and get_value_trend(mass, mass_history) == 'experimenting':
+            explanation.append("")
+            explanation.append("")
+            explanation.append(get_random_quote('TREND', 'experimenting'))
 
-    return explanation
+        print("Successfully generated explanation")
+        return explanation
+    except Exception as e:
+        print("Error in get_explanation_text:", str(e))
+        import traceback
+        print("Traceback:", traceback.format_exc())
+        return ["Error: " + str(e)]
 
 def draw_wrapped_text(screen, text, font, color, rect):
     words = text.split(' ')
